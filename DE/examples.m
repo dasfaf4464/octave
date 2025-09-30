@@ -7,10 +7,38 @@ dy1 = zeros(1, N + 1); dy2 = zeros(1, N + 1);
 
 first = 0; second = 0;
 
+p = @(x) 2 / x;
+q = @(x) 2 / (x^2);
+r = @(x) sin(log(x)) / (x^2);
 f = @(x, y, dy) (-2 / x) * dy + (2 / x^2) * y + (sin(log(x)) / x^2);
 f_homo = @(x, y, dy) (-2 / x) * dy + (2 / x^2) * y;
-y1(1) = 1; y2(1) = 0; y(N + 1) = 2;
+y1(1) = 1; y2(1) = 0; M = 2;
 
+#
+#
+#Euler shooting
+for i = 1:N
+    k = p(x(i)) * dy1(i) + q(x(i)) * y1(i) + r(x(i)); # f(dy(1), y(1), x(i)) = 현재 dy의 기울기 (dy)^2
+    dy1(i + 1) = k * h + dy1(i); # 다음 dy의 값
+    y1(i + 1) = dy1(i) * h + y1(i); # 다음 y의 값
+end
+
+first = y1(N + 1);
+
+for i = 1:N
+    k = p(x(i)) * dy2(i) + q(x(i)) * y2(i);
+    dy2(i + 1) = k * h + dy2(i);
+    y2(i + 1) = dy2(i) * h + y2(i);
+end
+
+second = y2(N + 1);
+
+c = (M - first) / second;
+y = y1 + c * y2;
+
+#
+#
+#RK4 shooting
 for n = 1:N
     dy_k1 = f(x(n), y1(n), dy1(n));
     y_k1 = dy1(n);
@@ -43,6 +71,6 @@ end
 
 second = y2(N + 1);
 
-c = (y(N + 1) - first) / second;
+c = (M - first) / second;
 y = y1 + c * y2;
 plot(x, y);
