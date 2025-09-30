@@ -1,4 +1,4 @@
-#shooting method y'' = f(x, y, y')
+#shooting method y'' = f(x, y, y') linear
 
 clc; clear;
 N = 20; a = 0; b = pi;
