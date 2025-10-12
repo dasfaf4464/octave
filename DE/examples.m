@@ -1,76 +1,78 @@
-clc; clear;
+# HW#2 -no.2 #
+clear;
+
 N = 10; a = 1; b = 2;
 x = linspace(a, b, N + 1);
-h = x(2) - x(1); #same as (b-a)/N
-y1 = zeros(1, N + 1); y2 = zeros(1, N + 1); y = zeros(1, N + 1);
-dy1 = zeros(1, N + 1); dy2 = zeros(1, N + 1);
+h = (b - a) / N; %h = x(2)-x(1);
 
-first = 0; second = 0;
+## 정답
+c2 = (8 - 12 * sin(log(2)) - 4 * cos(log(2)));
+c1 = 11/10 - c2;
+ex = c1 * x + c2 ./ x.^2 - 0.3 * sin(log(x)) - 0.1 * cos(log(x));
+figure(1); clf;
+plot(x, ex, 'ko-')
 
-p = @(x) 2 / x;
-q = @(x) 2 / (x^2);
-r = @(x) sin(log(x)) / (x^2);
-f = @(x, y, dy) (-2 / x) * dy + (2 / x^2) * y + (sin(log(x)) / x^2);
-f_homo = @(x, y, dy) (-2 / x) * dy + (2 / x^2) * y;
-y1(1) = 1; y2(1) = 0; M = 2;
+p = @(x) -2 / x;
+q = @(x) 2 / x^2;
+r = @(x) sin(log(x)) / x^2;
+#y'' = p(X)y' + q(x)y + r(x)
 
-#
-#
-#Euler shooting
-for i = 1:N
-    k = p(x(i)) * dy1(i) + q(x(i)) * y1(i) + r(x(i)); # f(dy(1), y(1), x(i)) = 현재 dy의 기울기 (dy)^2
-    dy1(i + 1) = k * h + dy1(i); # 다음 dy의 값
-    y1(i + 1) = dy1(i) * h + y1(i); # 다음 y의 값
-end
-
-first = y1(N + 1);
+# Euler
+u1(1) = 1; v1(1) = 0; u2(1) = 0; v2(1) = 1;
 
 for i = 1:N
-    k = p(x(i)) * dy2(i) + q(x(i)) * y2(i);
-    dy2(i + 1) = k * h + dy2(i);
-    y2(i + 1) = dy2(i) * h + y2(i);
+    u1(i + 1) = u1(i) + h * v1(i);
+    v1(i + 1) = v1(i) + h * (p(x(i)) * v1(i) + q(x(i)) * u1(i) + r(x(i)));
+    u2(i + 1) = u2(i) + h * v2(i);
+    v2(i + 1) = v2(i) + h * (p(x(i)) * v2(i) + q(x(i)) * u2(i));
 end
 
-second = y2(N + 1);
+y = u1 + u2 * (ex(N + 1) -u1(N + 1)) / u2(N + 1);
+figure(1); hold on
+plot(x, y, 'r--')
+# Euler end
 
-c = (M - first) / second;
-y = y1 + c * y2;
+%%% RK4 (HW#2)
+y1(1) = ex(1); yp1(1) = 0;
+y2(1) = 0; yp2(1) = 1;
 
-#
-#
-#RK4 shooting
-for n = 1:N
-    dy_k1 = f(x(n), y1(n), dy1(n));
-    y_k1 = dy1(n);
-    dy_k2 = f(x(n) + h / 2, y1(n) + h / 2 * y_k1, dy1(n) + h / 2 * dy_k1);
-    y_k2 = y_k1 + dy_k1 * h / 2;
-    dy_k3 = f(x(n) + h / 2, y1(n) + h / 2 * y_k2, dy1(n) + h / 2 * dy_k2);
-    y_k3 = y_k2 + dy_k2 * h / 2;
-    dy_k4 = f(x(n) + h, y1(n) + h * y_k3, dy1(n) + h * dy_k3);
-    y_k4 = y_k3 + dy_k3 * h;
-    dy1(n + 1) = dy1(n) + (1/6) * (dy_k1 + 2 * dy_k2 + 2 * dy_k3 + dy_k4) * h;
-    y1(n + 1) = y1(n) + (1/6) * (y_k1 + 2 * y_k2 + 2 * y_k3 + y_k4) * h;
+for i = 1:N
+    # first
+    k1_y1 = h * yp1(i); #한칸 다음 y
+    k1_yp1 = h * (p(x(i)) * yp1(i) + q(x(i)) * y1(i) + r(x(i))); # 한칸 다음의 y'
+
+    k2_y1 = h * (yp1(i) + 0.5 * k1_yp1); # 반칸 다음 y (y' = k1_yp 가정)
+    k2_yp1 = h * (p(x(i) + 0.5 * h) * (yp1(i) + 0.5 * k1_yp1) + q(x(i) + 0.5 * h) * (y1(i) + 0.5 * k1_y1) + r(x(i) + 0.5 * h)); # 반칸 다음 y'' (y' = k1_yp라 가정)
+
+    k3_y1 = h * (yp1(i) + 0.5 * k2_yp1);
+    k3_yp1 = h * (p(x(i) + 0.5 * h) * (yp1(i) + 0.5 * k2_yp1) + q(x(i) + 0.5 * h) * (y1(i) + 0.5 * k2_y1) + r(x(i) + 0.5 * h));
+
+    k4_y1 = h * (yp1(i) + k3_yp1);
+    k4_yp1 = h * (p(x(i) + h) * (yp1(i) + k3_yp1) + q(x(i) + h) * (y1(i) + k3_y1) + r(x(i) + h));
+
+    y1(i + 1) = y1(i) + (k1_y1 + 2 * k2_y1 + 2 * k3_y1 + k4_y1) / 6;
+    yp1(i + 1) = yp1(i) + (k1_yp1 + 2 * k2_yp1 + 2 * k3_yp1 + k4_yp1) / 6;
+
+    # second
+    k1_y2 = h * yp2(i);
+    k1_yp2 = h * (p(x(i)) * yp2(i) + q(x(i)) * y2(i));
+
+    k2_y2 = h * (yp2(i) + 0.5 * k1_yp2);
+    k2_yp2 = h * (p(x(i) + 0.5 * h) * (yp2(i) + 0.5 * k1_yp2) + q(x(i) + 0.5 * h) * (y2(i) + 0.5 * k1_y2));
+
+    k3_y2 = h * (yp2(i) + 0.5 * k2_yp2);
+    k3_yp2 = h * (p(x(i) + 0.5 * h) * (yp2(i) + 0.5 * k2_yp2) + q(x(i) + 0.5 * h) * (y2(i) + 0.5 * k2_y2));
+
+    k4_y2 = h * (yp2(i) + k3_yp2);
+    k4_yp2 = h * (p(x(i) + h) * (yp2(i) + k3_yp2) + q(x(i) + h) * (y2(i) + k3_y2));
+
+    y2(i + 1) = y2(i) + (k1_y2 + 2 * k2_y2 + 2 * k3_y2 + k4_y2) / 6;
+    yp2(i + 1) = yp2(i) + (k1_yp2 + 2 * k2_yp2 + 2 * k3_yp2 + k4_yp2) / 6;
 end
 
-first = y1(N + 1);
+% 최종 해 조합
+w = y1 + y2 * (ex(N + 1) - y1(N + 1)) / y2(N + 1);
 
-dy2(1) = 1;
-
-for n = 1:N
-    dy_k1 = f_homo(x(n), y2(n), dy2(n));
-    y_k1 = dy2(n);
-    dy_k2 = f_homo(x(n) + h / 2, y2(n) + h / 2 * y_k1, dy2(n) + h / 2 * dy_k1);
-    y_k2 = y_k1 + dy_k1 * h / 2;
-    dy_k3 = f_homo(x(n) + h / 2, y2(n) + h / 2 * y_k2, dy2(n) + h / 2 * dy_k2);
-    y_k3 = y_k2 + dy_k2 * h / 2;
-    dy_k4 = f_homo(x(n) + h, y2(n) + h * y_k3, dy2(n) + h * dy_k3);
-    y_k4 = y_k3 + dy_k3 * h;
-    dy2(n + 1) = dy2(n) + (1/6) * (dy_k1 + 2 * dy_k2 + 2 * dy_k3 + dy_k4) * h;
-    y2(n + 1) = y2(n) + (1/6) * (y_k1 + 2 * y_k2 + 2 * y_k3 + y_k4) * h;
-end
-
-second = y2(N + 1);
-
-c = (M - first) / second;
-y = y1 + c * y2;
-plot(x, y);
+figure(1); hold on
+plot(x, w, 's--')
+abs(ex - w)'
