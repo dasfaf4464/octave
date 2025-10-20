@@ -1,81 +1,84 @@
-#shooting method y'' = f(x, y, y') linear
-
 clc; clear;
-N = 20; a = 0; b = pi;
-x = linspace(a, b, N + 1);
-h = x(2) - x(1); #same as (b-a)/N
-y1 = zeros(1, N + 1); y2 = zeros(1, N + 1); y = zeros(1, N + 1);
-dy1 = zeros(1, N + 1); dy2 = zeros(1, N + 1);
 
-first = 0; second = 0;
+f = @(y, yp, x) -yp + y + x;
+g = @(y, yp) -yp + y;
+N = 20;
+x = linspace(0, 1, N);
+h = x(2) - x(1);
 
-f = @(x, y, dy) dy + y + (-2 * (1 + x)) * cos(x) + (x - 4) * sin(x); # y'' = f(x,y, y') -? f(x, y, dy)
-f_homo = @(x, y, dy) dy + y;
-y1(1) = 0; y2(1) = 0; y(N + 1) = -pi; #경계값 -> 양끝에서 초기값으로 변경해야 한다.
+# =========================
+# linear shooting
+# =========================
 
-#y'' = f(x, y , dy)
-# y' = u
-#u' = f(x, U, u) -> 다음 u를 구할 수 있다.
-#다음 u -> 다음 y를 구한다.
+# 1. Euler
 
-#euler
+y1 = zeros(N, 1); y2 = zeros(N, 1);
+yp1 = zeros(N, 1); yp2 = zeros(N, 1);
+y1(1) = 0; yp1(1) = 0;
+y2(1) = 0; yp2(1) = 1;
+b = 0;
 
-%{
-for n = 1:N
-    k1 = f(x(n), y1(n), dy1(n)); #y''(a)
-    dy1(n + 1) = k1 * h + dy1(n); #y'(a+h) = y''(a)*h + y'(a)
-    y1(n + 1) = dy1(n) * h + y1(n);
-end
+for i = 1:(N - 1)
+    yp1(i + 1) = yp1(i) + f(y1(i), yp1(i), x(i)) * h;
+    y1(i + 1) = y1(i) + yp1(i) * h;
+endfor
 
-first = y1(N + 1);
+for i = 1:N - 1
+    yp2(i + 1) = yp2(i) + g(y2(i), yp2(i)) * h;
+    y2(i + 1) = y2(i) + yp2(i) * h;
+endfor
 
-dy2(1) = 7;
+a = (b - y1(N)) / y2(N);
+y = y1 + a * y2;
 
-for n = 1:N
-    k1 = y2(n) + dy2(n);
-    dy2(n + 1) = k1 * h + dy2(n);
-    y2(n + 1) = dy2(n) * h + y2(n);
-end
+plot(x, y, 'bs-'); hold on;
 
-second = y2(N + 1);
+# 2. RK4
 
-c = (-pi - first) / second;
-y = y1 + c * y2;
-plot(x, y)
-%}
+y1 = zeros(N, 1); y2 = zeros(N, 1);
+yp1 = zeros(N, 1); yp2 = zeros(N, 1);
+y1(1) = 0; yp1(1) = 0;
+y2(1) = 0; yp2(1) = 1;
+b = 0;
 
-for n = 1:N
-    dy_k1 = f(x(n), y1(n), dy1(n)); #현재 dy의 기울기
-    y_k1 = dy1(n); #현재 y의기울기
-    dy_k2 = f(x(n) + h/2, y1(n) + h/2 * y_k1, dy1(n) + h/2 * dy_k1); #중점에서 dy의 기울기 y''
-    y_k2 = dy_k1 * h/2 + y_k1; #중점에서 y의 기울기
-    dy_k3 = f(x(n) + h/2, y1(n) + h/2 * y_k2, dy1(n) + h/2 * dy_k2);
-    y_k3 = dy_k2 * h/2 + y_k2;
-    dy_k4 = f(x(n) + h, y1(n) + h * y_k3, dy1(n) + h * dy_k3);
-    y_k4 = dy_k3 * h + y_k3;
-    dy1(n + 1) = dy1(n) + (1/6) * (dy_k1 + 2 * dy_k2 + 2 * dy_k3 + dy_k4) *h;
-    y1(n + 1) = y1(n) + (1/6) * (y_k1 + 2 * y_k2 + 2 * y_k3 + y_k4) * h;
-end
+for i = 1:(N - 1)
+    yp1_k1 = f(y1(i), yp1(i), x(i));
+    y1_k1 = yp1(i);
 
-first = y1(N + 1);
+    yp1_k2 = f(y1(i) + y1_k1 * (h / 2), yp1(i) + yp1_k1 * (h / 2), x(i) + (h / 2));
+    y1_k2 = yp1(i) + yp1_k1 * (h / 2);
 
-dy2(1) = 1;
+    yp1_k3 = f(y1(i) + y1_k2 * (h / 2), yp1(i) + yp1_k2 * (h / 2), x(i) + (h / 2));
+    y1_k3 = yp1(i) + yp1_k2 * (h / 2);
 
-for n = 1:N
-    dy_k1 = f_homo(x(n), y2(n), dy2(n)); #현재 dy의 기울기
-    y_k1 = dy2(n); #현재 y의기울기
-    dy_k2 = f_homo(x(n) + h/2, y2(n) + h/2 * y_k1, dy2(n) + h/2 * dy_k1); #중점에서 dy의 기울기 y''
-    y_k2 = dy_k1 * h/2 + y_k1; #중점에서 y의 기울기
-    dy_k3 = f_homo(x(n) + h/2, y2(n) + h/2 * y_k2, dy2(n) + h/2 * dy_k2);
-    y_k3 = dy_k2 * h/2 + y_k2;
-    dy_k4 = f_homo(x(n) + h, y2(n) + h * y_k3, dy2(n) + h * dy_k3);
-    y_k4 = dy_k3 * h + y_k3;
-    dy2(n + 1) = dy2(n) + (1/6) * (dy_k1 + 2 * dy_k2 + 2 * dy_k3 + dy_k4) * h;
-    y2(n + 1) = y2(n) + (1/6) * (y_k1 + 2 * y_k2 + 2 * y_k3 + y_k4) * h;
-end
+    yp1_k4 = f(y1(i) + y1_k3 * h, yp1(i) + yp1_k3 * h, x(i) + h);
+    y1_k4 = yp1(i) + yp1_k3 * h;
 
-second = y2(N + 1);
+    yp1(i + 1) = yp1(i) + ((yp1_k1 + (2 * yp1_k2) + (2 * yp1_k3) +yp1_k4) / 6) * h;
+    y1(i + 1) = y1(i) + ((y1_k1 + (2 * y1_k2) + (2 * y1_k3) + y1_k4) / 6) * h;
+endfor
 
-c = (y(N + 1) - first) / second;
-y = y1 + c * y2;
-plot(x, y);
+for i = 1:(N - 1)
+    yp2_k1 = g(y2(i), yp2(i));
+    y2_k1 = yp2(i);
+
+    yp2_k2 = g(y2(i) + y2_k1 * (h / 2), yp2(i) + yp2_k1 * (h / 2));
+    y2_k2 = yp2(i) + yp2_k1 * (h / 2);
+
+    yp2_k3 = g(y2(i) + y2_k2 * (h / 2), yp2(i) + yp2_k2 * (h / 2));
+    y2_k3 = yp2(i) + yp2_k2 * (h / 2);
+
+    yp2_k4 = g(y2(i) + y2_k3 * h, yp2(i) + yp2_k3 * h);
+    y2_k4 = yp2(i) + yp2_k3 * h;
+
+    yp2(i + 1) = yp2(i) + ((yp2_k1 + (2 * yp2_k2) + (2 * yp2_k3) +yp2_k4) / 6) * h;
+    y2(i + 1) = y2(i) + ((y2_k1 + (2 * y2_k2) + (2 * y2_k3) + y2_k4) / 6) * h;
+endfor
+
+a = (b - y1(N)) / y2(N);
+y = y1 + a * y2;
+
+plot(x, y, 'gs:'); hold on;
+
+legend('Euler', 'RK4');
+xlabel('x'); ylabel('y'); title('BVP');
